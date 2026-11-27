@@ -89,6 +89,7 @@ label{display:block;font-size:.78rem;color:var(--mu)}label input,label select,la
 @media print{@page{size:A4;margin:0}body>*{display:none!important}#print{display:block!important}}
 #ob{position:fixed;left:0;top:45%;z-index:125;background:var(--ac);color:var(--act);border:0;border-radius:0 10px 10px 0;padding:12px 7px;font:700 .78rem system-ui,sans-serif;writing-mode:vertical-rl;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25)}#ob[hidden]{display:none}
 #op{position:fixed;left:0;top:0;bottom:0;width:min(310px,88vw);z-index:126;background:var(--card);color:var(--tx);border-right:1px solid var(--bd);box-shadow:4px 0 16px rgba(0,0,0,.25);transform:translateX(-105%);transition:transform .2s;overflow:auto;padding:max(12px,env(safe-area-inset-top,0px)) 12px 16px;font-size:.88rem}#op.on{transform:none}
+#op .pb{height:10px;background:var(--bd);border-radius:99px;overflow:hidden;margin:8px 0}#op .pb i{display:block;height:100%;width:0;background:var(--ac);border-radius:99px;transition:width .15s}
 #op h3{margin:0 0 8px;display:flex;justify-content:space-between;align-items:center;font-size:1rem}#op h3 button{background:none;border:0;color:var(--tx);font-size:1.4rem;cursor:pointer}
 #op .oe{border:1px solid var(--bd);border-radius:10px;padding:8px;margin-bottom:8px;background:var(--bg)}#op .oe b{font-size:1rem;color:var(--dg)}#op .oe small{display:block;color:var(--mu);margin:2px 0 6px;overflow-wrap:anywhere}
 #op .oc{display:inline-block;margin:0 4px 4px 0;padding:5px 10px;border-radius:99px;border:1px solid var(--ac);background:var(--card);color:var(--tx);font-weight:600;cursor:pointer}#op .ox{background:none;border:0;color:var(--mu);text-decoration:underline;cursor:pointer;padding:4px 6px;font-size:.8rem}#op .om{color:var(--mu)}
@@ -330,11 +331,35 @@ sp(document);new MutationObserver(m=>m.forEach(x=>x.addedNodes.forEach(n=>n.node
 (function(){
 const SEL='textarea:not(#c_bk),input[placeholder^="Descri"]',V={a:'áàâã',e:'éê',i:'í',o:'óôõ',u:'úü',c:'ç'},OP={dic:null,st:'idle',cache:{},ign:new Set(),errs:[],t:0};
 const b=document.createElement('button'),p=document.createElement('div');b.id='ob';b.hidden=true;b.type='button';b.setAttribute('aria-label','Correcção ortográfica');p.id='op';p.setAttribute('aria-hidden','true');document.body.append(b,p);
-async function fc(u){let c;try{c=await caches.open('orto-v1');const h=await c.match(u);if(h)return h.text()}catch(e){}const r=await fetch(u);if(!r.ok)throw new Error(r.status);try{c&&await c.put(u,r.clone())}catch(e){}return r.text()}
-async function load(){if(OP.dic||OP.st=='load')return;OP.st='load';ui();
-try{const D='https://cdn.jsdelivr.net/npm/dictionary-pt@4.0.0/index.',[js,aff,dic]=await Promise.all([window.Typo?'':fc('https://cdn.jsdelivr.net/npm/typo-js@1.3.0/typo.js'),fc(D+'aff'),fc(D+'dic')]);
-if(!window.Typo){const s=document.createElement('script');s.textContent=js;document.head.appendChild(s)}
-await new Promise(r=>setTimeout(r,30));OP.dic=new Typo('pt',aff,dic);OP.st='ok'}catch(e){OP.st='err'}scan()}
+const T_URLS=['https://cdn.jsdelivr.net/npm/typo-js@1.3.0/typo.js','https://cdn.jsdelivr.net/npm/typo-js@1.2.4/typo.js','https://unpkg.com/typo-js@1.2.4/typo.js','https://cdnjs.cloudflare.com/ajax/libs/typo-js/1.2.1/typo.js'],
+D_BASES=['https://cdn.jsdelivr.net/npm/dictionary-pt@4.0.0/index.','https://unpkg.com/dictionary-pt@4.0.0/index.','https://fastly.jsdelivr.net/npm/dictionary-pt@4.0.0/index.','https://cdn.jsdelivr.net/npm/dictionary-pt@3.0.0/index.','https://unpkg.com/dictionary-pt@3.0.0/index.'];
+OP.pg=0;OP.tx='';OP.er='';
+function prog(p,t){OP.pg=Math.max(0,Math.min(100,p));if(t)OP.tx=t;const bar=document.getElementById('opb'),tx=document.getElementById('opt');if(bar)bar.style.width=OP.pg+'%';if(tx)tx.textContent=OP.tx+' · '+Math.round(OP.pg)+'%';if(OP.st=='load')b.textContent='Ortografia · '+Math.round(OP.pg)+'%'}
+function good(t,k){if(!t)return false;if(k=='js')return t.length>2000&&t.indexOf('Typo')>-1;if(k=='aff')return t.length>200&&!/^\s*</.test(t);return t.length>10000&&/^\uFEFF?\s*\d+/.test(t)}
+async function get(u,k,a,w,lb){let c=null;
+try{c=await caches.open('orto-v1');const h=await c.match(u);if(h){const t=await h.text();if(good(t,k)){prog(a+w,lb);return t}try{await c.delete(u)}catch(e){}}}catch(e){c=null}
+const ac=new AbortController();let to;const arm=()=>{clearTimeout(to);to=setTimeout(()=>ac.abort(),30000)};arm();
+try{prog(a,lb);const r=await fetch(u,{signal:ac.signal});if(!r.ok)throw new Error('HTTP '+r.status);let t='';
+if(r.body&&r.body.getReader){const rd=r.body.getReader(),dc=new TextDecoder('utf-8'),tot=+r.headers.get('content-length')||0;let n=0;
+for(;;){const x=await rd.read();if(x.done)break;arm();n+=x.value.length;t+=dc.decode(x.value,{stream:true});
+const f=tot?Math.min(n/tot,.97):1-Math.exp(-n/1500000);prog(a+w*f,lb+' ('+(n/1048576).toFixed(1)+' MB)')}t+=dc.decode()}
+else t=await r.text();
+if(!good(t,k))throw new Error('ficheiro inválido');
+try{c&&await c.put(u,new Response(t))}catch(e){}
+prog(a+w,lb);return t}
+catch(e){throw new Error(e.name=='AbortError'?'tempo esgotado':e.message)}finally{clearTimeout(to)}}
+async function any(urls,k,a,w,lb){let last='';for(const u of urls){try{return await get(u,k,a,w,lb)}catch(e){last=e.message;prog(a,'A tentar outro servidor')}}throw new Error(last||'sem ligação')}
+async function load(){if(OP.dic||OP.st=='load')return;OP.st='load';OP.er='';prog(0,'A iniciar');ui();
+try{
+if(!window.Typo){const js=await any(T_URLS,'js',0,8,'A carregar motor');const s=document.createElement('script');s.textContent=js;document.head.appendChild(s);if(!window.Typo)throw new Error('motor ortográfico inválido')}
+prog(8,'Motor carregado');
+let aff,dic,last='';
+for(const B of D_BASES){try{aff=await get(B+'aff','aff',8,7,'A carregar regras');dic=await get(B+'dic','dic',15,70,'A carregar dicionário');break}catch(e){last=e.message;aff=dic=null;prog(8,'A tentar outro servidor')}}
+if(!dic)throw new Error(last||'sem ligação');
+prog(85,'A preparar o dicionário (pode demorar alguns segundos)');
+await new Promise(r=>setTimeout(r,120));
+OP.dic=new Typo('pt',aff,dic,{platform:'any'});prog(100,'Pronto');OP.st='ok'}
+catch(e){OP.st='err';OP.er=String(e&&e.message||e)}scan()}
 const mine=()=>(S.cfg.dict=S.cfg.dict||[]);
 function okw(w){const l=w.toLowerCase();if(OP.ign.has(l)||mine().includes(l))return true;if(w==w.toUpperCase()&&w.length<=5)return true;try{return OP.dic.check(w)||OP.dic.check(l)}catch(e){return true}}
 function scan(){OP.errs=[];if(OP.dic){document.querySelectorAll(SEL).forEach(el=>{const re=/\p{L}+/gu,t=el.value||'';let m;while((m=re.exec(t))&&OP.errs.length<60){if(m[0].length>2&&!okw(m[0]))OP.errs.push({el,w:m[0],i:m.index})}})}ui()}
@@ -346,11 +371,11 @@ if(out.length<4){try{(OP.dic.suggest(k,5)||[]).forEach(x=>add(String(x).toLowerC
 const cap=w[0]!=w[0].toLowerCase();return OP.cache[k]=out.map(x=>cap?x[0].toUpperCase()+x.slice(1):x)}
 function fix(e,s){const t=e.el.value;e.el.value=t.slice(0,e.i)+s+t.slice(e.i+e.w.length);e.el.dispatchEvent(new Event('input',{bubbles:true}));scan()}
 function ui(){const has=!!document.querySelector(SEL)&&!document.querySelector('#lk:not([hidden])');b.hidden=!has;if(!has){p.classList.remove('on');return}
-b.textContent='Ortografia'+(OP.errs.length?' · '+OP.errs.length:'');if(!p.classList.contains('on'))return;
+b.textContent='Ortografia'+(OP.st=='load'?' · '+Math.round(OP.pg)+'%':(OP.errs.length?' · '+OP.errs.length:''));if(!p.classList.contains('on'))return;
 p.innerHTML='';const h=document.createElement('h3');h.innerHTML='<span>Correcção ortográfica</span>';const x=document.createElement('button');x.type='button';x.textContent='×';x.setAttribute('aria-label','Fechar');x.onclick=close;h.appendChild(x);p.appendChild(h);
 const msg=t=>{const d=document.createElement('p');d.className='om';d.textContent=t;p.appendChild(d);return d};
-if(OP.st=='load'){msg('A carregar o dicionário português… Na primeira vez precisa de internet; depois fica guardado no aparelho.');return}
-if(OP.st=='err'){msg('Não foi possível carregar o dicionário. Verifique a ligação à internet.');const r=document.createElement('button');r.type='button';r.className='oc';r.textContent='Tentar de novo';r.onclick=()=>{OP.st='idle';load()};p.appendChild(r);return}
+if(OP.st=='load'){msg('A carregar o dicionário português… Na primeira vez precisa de internet; depois fica guardado no aparelho.');const bw=document.createElement('div');bw.className='pb';const bi=document.createElement('i');bi.id='opb';bw.appendChild(bi);p.appendChild(bw);const tt=document.createElement('p');tt.className='om';tt.id='opt';p.appendChild(tt);prog(OP.pg,OP.tx);return}
+if(OP.st=='err'){msg('Não foi possível carregar o dicionário. Verifique a ligação à internet.'+(OP.er?' (Detalhe: '+OP.er+')':''));const r=document.createElement('button');r.type='button';r.className='oc';r.textContent='Tentar de novo';r.onclick=()=>{OP.st='idle';load()};p.appendChild(r);return}
 if(!OP.dic){load();return}
 if(!OP.errs.length){msg('Nenhum erro encontrado nas descrições e textos. ✓');return}
 msg('Toque numa sugestão para corrigir. Nomes e endereços não são verificados.');
