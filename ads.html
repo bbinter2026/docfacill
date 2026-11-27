@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Publicidade</title>
+<style>html,body{margin:0;padding:0;background:transparent;overflow:hidden}</style>
+</head><body>
+<script>
+(function(){
+  var s=new URLSearchParams(location.search).get('s')||'';
+  function banner(k,w,h){
+    document.write('<scr'+'ipt>atOptions={"key":"'+k+'","format":"iframe","height":'+h+',"width":'+w+',"params":{}};</scr'+'ipt>');
+    document.write('<scr'+'ipt src="https://www.highrevenueformat.com/'+k+'/invoke.js"></scr'+'ipt>');
+  }
+  if(s==='sky')      banner('564e7adc0ff1990d56cdd393faeeec06',160,600);
+  else if(s==='320') banner('ddcbd0d50628c33713525ea2badce6ff',320,50);
+  else if(s==='300'){
+    banner('be2d947b712bcc91c50359d1854bbb67',300,250);
+    document.write('<scr'+'ipt src="https://pl30778021.profitableratecpmnetwork.com/78/fa/00/78fa00cf4dcda3dedf40132f76226af6.js"></scr'+'ipt>');
+  }
+  else if(s==='nat'){
+    document.write('<scr'+'ipt async="async" data-cfasync="false" src="https://pl30778022.profitableratecpmnetwork.com/edbac03e0788a019f72e8767b9dc91d4/invoke.js"></scr'+'ipt><div id="container-edbac03e0788a019f72e8767b9dc91d4"></div>');
+  }
+})();
+</script>
+</body></html>
